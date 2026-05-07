@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NeoNexus</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Socket.IO -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+
+  <link rel="stylesheet" href="style.css"/>
+</head>
+
+<body>
+
+  <!-- ░░ BACKGROUND ░░ -->
+  <div class="bg-layer">
+    <div class="bg-image"></div>
+    <div class="bg-overlay"></div>
+    <div class="bg-grid"></div>
+  </div>
+
+  <!-- ░░ TOAST CONTAINER ░░ -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  <!-- ░░ NAVBAR ░░ -->
+  <header class="navbar">
+    <div class="navbar-brand">
+      <div class="brand-icon">
+        <i class="fas fa-robot"></i>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">NeoNexus</span>
+        <span class="brand-sub">Smart Delivery Robot</span>
+      </div>
+    </div>
+
+    <div class="navbar-center">
+      <div class="live-indicator">
+        <span class="live-dot"></span>
+        <span>LIVE</span>
+      </div>
+    </div>
+
+    <div class="navbar-actions">
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <i class="fas fa-moon" id="themeIcon"></i>
+      </button>
+      <div class="connection-badge" id="connectionBadge">
+        <span class="conn-dot"></span>
+        <span id="connLabel">Connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ░░ MAIN LAYOUT ░░ -->
+  <main class="dashboard">
+
+    <!-- ── LEFT COLUMN ── -->
+    <aside class="col-left">
+
+      <!-- Robot Status Card -->
+      <div class="card status-card">
+        <div class="card-label">Robot Status</div>
+        <div class="robot-visual">
+          <div class="robot-body" id="robotBody">
+            <div class="robot-head">
+              <div class="robot-eye left"></div>
+              <div class="robot-eye right"></div>
+              <div class="robot-mouth"></div>
+            </div>
+            <div class="robot-torso">
+              <div class="robot-panel"></div>
+              <div class="robot-arm left"></div>
+              <div class="robot-arm right"></div>
+            </div>
+            <div class="robot-wheels">
+              <div class="robot-wheel"></div>
+              <div class="robot-wheel"></div>
+            </div>
+          </div>
+          <div class="robot-shadow"></div>
+          <div class="robot-trail" id="robotTrail"></div>
+        </div>
+
+        <div class="status-badge-wrap">
+          <div class="status-badge" id="statusBadge">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Idle</span>
+          </div>
+        </div>
+
+        <div class="status-detail" id="statusDetail">Robot is ready for deployment</div>
+
+        <div class="stat-row">
+          <div class="stat-item">
+            <span class="stat-val" id="totalDeliveries">0</span>
+            <span class="stat-lbl">Total</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-val" id="todayDeliveries">0</span>
+            <span class="stat-lbl">Today</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-val" id="successRate">100%</span>
+            <span class="stat-lbl">Success</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dispatch Card -->
+      <div class="card dispatch-card">
+        <div class="card-label">Dispatch Robot</div>
+        <p class="dispatch-sub">Select a table to begin delivery</p>
+
+        <div class="dispatch-buttons">
+          <button class="dispatch-btn btn-t1" data-table="Table 1" onclick="sendRobot('Table 1')">
+            <span class="btn-icon"><i class="fas fa-utensils"></i></span>
+            <span class="btn-label">Table 1</span>
+            <span class="btn-count" id="count-t1">0</span>
+            <span class="btn-arrow"><i class="fas fa-arrow-right"></i></span>
+          </button>
+
+          <button class="dispatch-btn btn-t2" data-table="Table 2" onclick="sendRobot('Table 2')">
+            <span class="btn-icon"><i class="fas fa-chair"></i></span>
+            <span class="btn-label">Table 2</span>
+            <span class="btn-count" id="count-t2">0</span>
+            <span class="btn-arrow"><i class="fas fa-arrow-right"></i></span>
+          </button>
+
+          <button class="dispatch-btn btn-t3" data-table="Table 3" onclick="sendRobot('Table 3')">
+            <span class="btn-icon"><i class="fas fa-concierge-bell"></i></span>
+            <span class="btn-label">Table 3</span>
+            <span class="btn-count" id="count-t3">0</span>
+            <span class="btn-arrow"><i class="fas fa-arrow-right"></i></span>
+          </button>
+        </div>
+
+        <!-- Progress bar (visible during delivery) -->
+        <div class="delivery-progress" id="deliveryProgress" style="display:none">
+          <div class="progress-label">
+            <span id="progressLabel">Delivering…</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ── RIGHT COLUMN ── -->
+    <section class="col-right">
+
+      <!-- Analytics Card -->
+      <div class="card analytics-card">
+        <div class="card-header-row">
+          <div class="card-label">Delivery Analytics</div>
+          <div class="chart-legend">
+            <span class="legend-dot" style="background:var(--accent-1)"></span>Deliveries
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="deliveryChart"></canvas>
+        </div>
+      </div>
+
+      <!-- History Card -->
+      <div class="card history-card">
+        <div class="card-header-row">
+          <div class="card-label">Delivery History</div>
+          <button class="clear-btn" onclick="clearHistory()">
+            <i class="fas fa-trash-alt"></i> Clear
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Table</th>
+                <th>Timestamp</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr class="empty-row" id="emptyRow">
+                <td colspan="5">
+                  <div class="empty-state">
+                    <i class="fas fa-robot"></i>
+                    <span>No deliveries yet — dispatch the robot!</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
