@@ -220,6 +220,21 @@ def read_serial():
                 socketio.emit("error", {
                     "message": "❌ Wrong RFID detected"
                 })
+            elif line == "TIMEOUT":
+
+                robot_state["status"] = "idle"
+                robot_state["busy"] = False
+                robot_state["current_target"] = None
+
+                socketio.emit("error", {
+                     "message": "⏰ Robot timeout — RFID not detected"
+            })
+
+            socketio.emit("status_update", {
+                "status": "idle",
+                "target": None,
+                "message": "🟢 Robot ready"
+    })
 # Start thread
 threading.Thread(target=read_serial, daemon=True).start()
 
