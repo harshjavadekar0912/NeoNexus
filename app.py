@@ -98,10 +98,10 @@ def on_send_robot(data):
 
     # 🔥 Send ONLY here (correct place)
     if ser:
-    ser.write((uid + "\n").encode())
-else:
-    emit("error", {"message": "Arduino not connected"})
-    return
+        ser.write((uid + "\n").encode())
+    else:
+        emit("error", {"message": "Arduino not connected"})
+        return
 
    robot_state["status"] = "delivering"
 robot_state["current_target"] = table
@@ -119,17 +119,17 @@ def handle_delivery_complete(table_name):
     if not robot_state["busy"]:
     return
     
-    robot_state["status"] = "idle"
-    robot_state["current_target"] = None
-    robot_state["busy"] = False
-    robot_state["start_time"] = None
-
-    robot_state["delivery_count"][table_name] += 1
-
-    duration = 0
+   duration = 0
 
 if robot_state["start_time"]:
     duration = round(time.time() - robot_state["start_time"], 1)
+
+robot_state["status"] = "idle"
+robot_state["current_target"] = None
+robot_state["busy"] = False
+robot_state["start_time"] = None
+
+robot_state["delivery_count"][table_name] += 1
 
 entry = {
     "table": table_name,
