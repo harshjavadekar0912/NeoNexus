@@ -154,18 +154,64 @@ entry = {
 
 # ─────────────────────────── Serial Listener ───────────────────────────
 def read_serial():
+
     while True:
-        if ser.in_waiting:
+
+        if ser and ser.in_waiting:
+
             line = ser.readline().decode(errors="ignore").strip()
+
             print("Arduino:", line)
 
-            if line.startswith("DELIVERED:"):
+            # ───────────────── ARRIVED ─────────────────
+            if line.startswith("ARRIVED:"):
+
                 uid = line.split(":")[1]
 
-                # Find table name
                 for table, u in TABLE_UID_MAP.items():
+
                     if u == uid:
+
+                        robot_state["status"] = "arrived"
+
+                        socketio.emit("status_update", {
+                            "status": "arrived",
+                            "target": table,
+                            "message": f"✅ Arrived at {table}"
+                        })
+
+                        break
+
+            # ───────────────── RETURNING ─────────────────
+            elif line.startswith("RETURNING:"):
+
+                uid = line.split(":")[1]
+
+                for table, u in TABLE_UID_MAP.items():
+
+                    if u == uid:
+
+                        robot_state["status"] = "returning"
+
+                        socketio.emit("status_update", {
+                            "status": "returning",
+                            "target": table,
+                            "message": f"↩️ Returning from {table}"
+                        })
+
+                        break
+
+            # ───────────────── DELIVERED ─────────────────
+            elif line.startswith("DELIVERED:"):
+
+                uid = line.split(":")[1]
+
+                for table, u in TABLE_UID_MAP.items():
+
+                    if u == uid:
+
                         handle_delivery_complete(table)
+
                         break
 
 # Start thread
