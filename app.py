@@ -10,8 +10,13 @@ import serial
 import time
 
 # 🔌 Serial Setup
-ser = serial.Serial('COM5', 9600, timeout=1)
-time.sleep(2)
+try:
+    ser = serial.Serial('COM5', 9600, timeout=1)
+    time.sleep(2)
+    print("✅ Arduino connected")
+except Exception as e:
+    print("❌ Arduino connection failed:", e)
+    ser = None
 
 # 🔐 Supabase config
 SUPABASE_URL = "https://ukvbawjyfwjyxddcxtly.supabase.co"
@@ -35,10 +40,14 @@ robot_state = {
     "status": "idle",
     "current_target": None,
     "history": [],
-    "delivery_count": {"Table 1": 0, "Table 2": 0, "Table 3": 0},
-    "busy": False
+    "delivery_count": {
+        "Table 1": 0,
+        "Table 2": 0,
+        "Table 3": 0
+    },
+    "busy": False,
+    "start_time": None
 }
-
 # ─────────────────────────── Supabase Helpers ───────────────────────────
 def save_delivery(entry):
     supabase.table("deliveries").insert({
@@ -88,11 +97,16 @@ def on_send_robot(data):
     uid = TABLE_UID_MAP[table]
 
     # 🔥 Send ONLY here (correct place)
+    if ser:
     ser.write((uid + "\n").encode())
+else:
+    emit("error", {"message": "Arduino not connected"})
+    return
 
-    robot_state["status"] = "delivering"
-    robot_state["current_target"] = table
-    robot_state["busy"] = True
+   robot_state["status"] = "delivering"
+robot_state["current_target"] = table
+robot_state["busy"] = True
+robot_state["start_time"] = time.time()
 
     socketio.emit("status_update", {
         "status": "delivering",
@@ -102,19 +116,27 @@ def on_send_robot(data):
 
 # ─────────────────────────── Handle Completion ───────────────────────────
 def handle_delivery_complete(table_name):
+    if not robot_state["busy"]:
+    return
+    
     robot_state["status"] = "idle"
     robot_state["current_target"] = None
     robot_state["busy"] = False
+    robot_state["start_time"] = None
 
     robot_state["delivery_count"][table_name] += 1
 
-    entry = {
-        "table": table_name,
-        "timestamp": datetime.now().strftime("%d %b %Y, %I:%M:%S %p"),
-        "status": "Completed",
-        "duration": "Actual (Arduino Controlled)"
-    }
+    duration = 0
 
+if robot_state["start_time"]:
+    duration = round(time.time() - robot_state["start_time"], 1)
+
+entry = {
+    "table": table_name,
+    "timestamp": datetime.now().strftime("%d %b %Y, %I:%M:%S %p"),
+    "status": "Completed",
+    "duration": f"{duration}s"
+}
     save_delivery(entry)
     robot_state["history"] = load_history()
 
@@ -157,6 +179,25 @@ def index():
 @app.route("/api/state")
 def get_state():
     return jsonify(robot_state)
+
+@app.route("/api/clear_history", methods=["POST"])
+def clear_history():
+
+    # Clear Supabase table
+    supabase.table("deliveries").delete().neq("id", 0).execute()
+
+    robot_state["history"] = []
+    robot_state["delivery_count"] = {
+        "Table 1": 0,
+        "Table 2": 0,
+        "Table 3": 0
+    }
+
+    socketio.emit("history_cleared", {
+        "counts": robot_state["delivery_count"]
+    })
+
+    return jsonify({"success": True})
 
 # ─────────────────────────── Run ───────────────────────────
 if __name__ == "__main__":
