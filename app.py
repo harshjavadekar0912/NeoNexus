@@ -84,6 +84,7 @@ def on_connect():
 
 @socketio.on("send_robot")
 def on_send_robot(data):
+
     table = data.get("table")
 
     if table not in TABLE_UID_MAP:
@@ -96,17 +97,18 @@ def on_send_robot(data):
 
     uid = TABLE_UID_MAP[table]
 
-    # 🔥 Send ONLY here (correct place)
+    # Send UID to Arduino
     if ser:
         ser.write((uid + "\n").encode())
     else:
         emit("error", {"message": "Arduino not connected"})
         return
 
-   robot_state["status"] = "delivering"
-robot_state["current_target"] = table
-robot_state["busy"] = True
-robot_state["start_time"] = time.time()
+    # Update robot state
+    robot_state["status"] = "delivering"
+    robot_state["current_target"] = table
+    robot_state["busy"] = True
+    robot_state["start_time"] = time.time()
 
     socketio.emit("status_update", {
         "status": "delivering",
@@ -114,30 +116,34 @@ robot_state["start_time"] = time.time()
         "message": f"🚀 Moving to {table}"
     })
 
+
 # ─────────────────────────── Handle Completion ───────────────────────────
 def handle_delivery_complete(table_name):
+
     if not robot_state["busy"]:
-    return
-    
-   duration = 0
+        return
 
-if robot_state["start_time"]:
-    duration = round(time.time() - robot_state["start_time"], 1)
+    duration = 0
 
-robot_state["status"] = "idle"
-robot_state["current_target"] = None
-robot_state["busy"] = False
-robot_state["start_time"] = None
+    if robot_state["start_time"]:
+        duration = round(time.time() - robot_state["start_time"], 1)
 
-robot_state["delivery_count"][table_name] += 1
+    robot_state["status"] = "idle"
+    robot_state["current_target"] = None
+    robot_state["busy"] = False
+    robot_state["start_time"] = None
 
-entry = {
-    "table": table_name,
-    "timestamp": datetime.now().strftime("%d %b %Y, %I:%M:%S %p"),
-    "status": "Completed",
-    "duration": f"{duration}s"
-}
+    robot_state["delivery_count"][table_name] += 1
+
+    entry = {
+        "table": table_name,
+        "timestamp": datetime.now().strftime("%d %b %Y, %I:%M:%S %p"),
+        "status": "Completed",
+        "duration": f"{duration}s"
+    }
+
     save_delivery(entry)
+
     robot_state["history"] = load_history()
 
     socketio.emit("delivery_complete", {
