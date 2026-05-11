@@ -163,7 +163,7 @@ def read_serial():
 
             print("Arduino:", line)
 
-            # ───────────────── ARRIVED ─────────────────
+            # ───────── ARRIVED ─────────
             if line.startswith("ARRIVED:"):
 
                 uid = line.split(":")[1]
@@ -177,12 +177,12 @@ def read_serial():
                         socketio.emit("status_update", {
                             "status": "arrived",
                             "target": table,
-                            "message": f"✅ Arrived at {table}"
+                            "message": f"✅ Robot arrived at {table}"
                         })
 
                         break
 
-            # ───────────────── RETURNING ─────────────────
+            # ───────── RETURNING ─────────
             elif line.startswith("RETURNING:"):
 
                 uid = line.split(":")[1]
@@ -201,7 +201,7 @@ def read_serial():
 
                         break
 
-            # ───────────────── DELIVERED ─────────────────
+            # ───────── DELIVERY COMPLETE ─────────
             elif line.startswith("DELIVERED:"):
 
                 uid = line.split(":")[1]
@@ -214,6 +214,12 @@ def read_serial():
 
                         break
 
+            # ───────── WRONG RFID ─────────
+            elif line.startswith("WRONG_TAG:"):
+
+                socketio.emit("error", {
+                    "message": "❌ Wrong RFID detected"
+                })
 # Start thread
 threading.Thread(target=read_serial, daemon=True).start()
 
